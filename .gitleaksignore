@@ -1,1 +1,9 @@
-06a03230fa19739e0ef31b2a68fdd0a45205f919:.github/workflows/main.yml:aws-secret-key:38
+# Ignore specific patterns in JSON files
+**/*.json:prisidio_xapikey
+
+# Ignore specific values in JSON files
+**/*.json:{"prisidio_xapikey": "*"}
+
+# Ignore specific pattern
+*.toml
+.gitleaksignore
