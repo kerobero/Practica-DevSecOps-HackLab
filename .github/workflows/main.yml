@@ -35,7 +35,8 @@ jobs:
       - name: Clean gitleaks
         run: rm /tmp/gitleaks.tmp   
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # para análisis que miran historial
+        with:
+          fetch-depth: 0   # para análisis que miran historial
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -48,7 +49,7 @@ jobs:
     needs: [secrets]
     steps:
       - uses: actions/checkout@v4
-      - name: Semgrep (bloqueante)
+      - name: Semgrep (no bloqueante)
         run: |
           docker run --rm -v "$PWD:/src" returntocorp/semgrep:latest \
             semgrep scan --config p/ci --config .semgrep
