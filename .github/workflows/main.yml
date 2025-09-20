@@ -10,6 +10,8 @@ permissions:
   contents: read
   security-events: write
   packages: write   # útil si luego publicas en GHCR
+  discussions: write
+  pull-requests: write
 
 concurrency:
   group: devsecops-${{ github.ref }}
