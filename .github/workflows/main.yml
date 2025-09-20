@@ -32,6 +32,8 @@ jobs:
     name: Secrets scanning (Gitleaks)
     runs-on: self-hosted
     steps:
+      - name: Clean gitleaks
+        run: rm /tmp/gitleaks.tmp   
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }   # para análisis que miran historial
       - name: Gitleaks
