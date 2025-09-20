@@ -1,0 +1,58 @@
+name: devsecops-pipeline
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write   # útil si luego publicas en GHCR
+
+concurrency:
+  group: devsecops-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 🔁 Cambia esto para probar cada escenario (apps/10-secrets-leak, 20-sast-bugs, etc.)
+  APP_DIR: apps/10-secrets-leak
+  # Parámetros de despliegue local
+  IMAGE_NAME: demo-app
+  IMAGE_TAG: local
+  KIND_CLUSTER: kind-devsecops
+  SERVICE_RELEASE_NAME: demo
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Secrets + SAST
+  # ──────────────────────────────────────────────────────────────────────────────
+  secrets:
+    name: Secrets scanning (Gitleaks)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # para análisis que miran historial
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Si usas un gitleaks.toml propio, añade inputs/vars según la acción
+
+  sast:
+    name: SAST (Semgrep)
+    runs-on: self-hosted
+    needs: [secrets]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep (bloqueante)
+        run: |
+          docker run --rm -v "$PWD:/src" returntocorp/semgrep:latest \
+            semgrep scan --config p/ci --config .semgrep
+      - name: Export SARIF (para pestaña Security)
+        run: |
+          docker run --rm -v "$PWD:/src" returntocorp/semgrep:latest \
+            semgrep scan --config p/ci --config .semgrep --sarif -o semgrep.sarif || true
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: semgrep.sarif }
