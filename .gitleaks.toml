@@ -1,0 +1,40 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+description = "AWS Access Key"
+id = "aws-access-key"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+description = "AWS Secret Key"
+id = "aws-secret-key"
+aregex = '''([^A-Za-z0-9/+=]{0,20}[A-Za-z0-9/+=]{40})?'''
+tags = ["key", "AWS"]
+
+[[rules]]
+description = "Generic API Key"
+id = "generic-api-key"
+regex = '''key|token|secret|password.*=.*['\"][0-9a-zA-Z]{20,45}['\"]'''
+tags = ["key", "API"]
+
+[[rules]]
+description = "Private Key"
+id = "private-key"
+regex = '''-----BEGIN (RSA|DSA|EC|OPENSSH|PGP) PRIVATE KEY-----'''
+tags = ["key", "private"]
+
+[[rules]]
+description = "Password in URL"
+id = "password-in-url"
+regex = '''[a-zA-Z]{3,10}://[^/\\s:@]{3,20}:[^/\\s:@]{3,20}@.{1,100}["'\s]'''
+tags = ["password", "URL"]
+
+[[rules]]
+description = "Slack Token"
+id = "slack-token"
+regex = '''xox[baprs]-([0-9a-zA-Z]{10,48})?'''
+tags = ["key", "Slack"]

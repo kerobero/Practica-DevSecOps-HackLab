@@ -10,6 +10,8 @@ permissions:
   contents: read
   security-events: write
   packages: write   # útil si luego publicas en GHCR
+  discussions: write
+  pull-requests: write
 
 concurrency:
   group: devsecops-${{ github.ref }}
@@ -33,9 +35,10 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Clean gitleaks
-        run: rm /tmp/gitleaks.tmp   
+        run: rm -f /tmp/gitleaks.tmp   
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # para análisis que miran historial
+        with:
+          fetch-depth: 0   # para análisis que miran historial
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -48,7 +51,7 @@ jobs:
     needs: [secrets]
     steps:
       - uses: actions/checkout@v4
-      - name: Semgrep (bloqueante)
+      - name: Semgrep (no bloqueante)
         run: |
           docker run --rm -v "$PWD:/src" returntocorp/semgrep:latest \
             semgrep scan --config p/ci --config .semgrep

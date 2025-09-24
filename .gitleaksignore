@@ -1,0 +1,9 @@
+# Ignore specific patterns in JSON files
+**/*.json:prisidio_xapikey
+
+# Ignore specific values in JSON files
+**/*.json:{"prisidio_xapikey": "*"}
+
+# Ignore specific pattern
+*.toml
+.gitleaksignore
