@@ -95,7 +95,8 @@ jobs:
     defaults:
       working-directory: ${APP_DIR}
     steps:
-      - name: C
+      - uses: actions/checkout@v4
+      - name: Change Directory
         run: |
           cd "${APP_DIR}"
       - name: Login to GitHub Container Registry
