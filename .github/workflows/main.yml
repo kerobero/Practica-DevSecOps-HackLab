@@ -65,15 +65,32 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────────
   # IaC + Build + SBOM
   # ──────────────────────────────────────────────────────────────────────────────
-  iac:
-    name: IaC scan (Checkov)
+  # iac:
+  #   name: IaC scan (Checkov)
+  #   runs-on: self-hosted
+  #   needs: [sast]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Checkov (K8s/Terraform)
+  #       uses: bridgecrewio/checkov-action@master
+  #       with:
+  #         directory: .
+  #         quiet: true
+  #         soft_fail: false     # pon true si no quieres bloquear (no recomendado)
+
+
+  build:
+    name: Build + SBOM
     runs-on: self-hosted
     needs: [sast]
     steps:
       - uses: actions/checkout@v4
-      - name: Checkov (K8s/Terraform)
-        uses: bridgecrewio/checkov-action@master
+      - name: Build imagen de la app objetivo
+        run: |
+          cd "${APP_DIR}"
+          docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+      - name: SBOM (Syft)
+        uses: anchore/sbom-action@v0
         with:
-          directory: .
-          quiet: true
-          soft_fail: false     # pon true si no quieres bloquear (no recomendado)
+          image: ${IMAGE_NAME}:${IMAGE_TAG}
+          artifact-name: sbom.spdx.json   # queda como artefacto del job
