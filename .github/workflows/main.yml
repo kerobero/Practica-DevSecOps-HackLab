@@ -92,7 +92,12 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: [sast]
+    defaults:
+      working-directory: ${APP_DIR}
     steps:
+      - name: C
+        run: |
+          cd "${APP_DIR}"
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
