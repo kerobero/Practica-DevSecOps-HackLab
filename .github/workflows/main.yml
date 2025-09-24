@@ -112,7 +112,6 @@ jobs:
           context: .
           file: apps/10-secrets-leak/Dockerfile
           push: true
-          push: true
           tags: kerobero/demo-app:local
 
 
