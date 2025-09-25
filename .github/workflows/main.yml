@@ -118,7 +118,6 @@ jobs:
     env:
       USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
       GITHUB_SHA: ${{ github.sha }}
-    needs: build
     name: 'Docker'
     runs-on: ubuntu-latest
     steps:
