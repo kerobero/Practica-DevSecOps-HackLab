@@ -179,12 +179,12 @@ jobs:
         run: kind load docker-image demo-app:local --name devsecops
       - name: Helm upgrade/install
         run: |
-          helm upgrade --install demo charts/demo-app \
+          helm upgrade --install demo-app charts/demo-app \
             --set image.repository=${IMAGE_NAME} \
             --set image.tag=${IMAGE_TAG} \
             --set service.type=NodePort
       - name: Esperar readiness
-        run: kubectl rollout status deploy/demo --timeout=180s
+        run: kubectl rollout status deploy/demo-app --timeout=180s
 
   dast:
     name: DAST (OWASP ZAP baseline)
