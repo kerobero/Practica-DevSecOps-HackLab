@@ -179,12 +179,12 @@ jobs:
         run: kind load docker-image demo-app:local --name devsecops
       - name: Helm upgrade/install
         run: |
-          helm upgrade --install ${SERVICE_RELEASE_NAME} charts/demo-app \
+          helm upgrade --install demo charts/demo-app \
             --set image.repository=${IMAGE_NAME} \
             --set image.tag=${IMAGE_TAG} \
             --set service.type=NodePort
       - name: Esperar readiness
-        run: kubectl rollout status deploy/${SERVICE_RELEASE_NAME} --timeout=180s
+        run: kubectl rollout status deploy/demo --timeout=180s
 
   dast:
     name: DAST (OWASP ZAP baseline)
@@ -193,7 +193,7 @@ jobs:
     steps:
       - name: Port-forward al Service y ejecutar ZAP
         run: |
-          kubectl port-forward svc/${SERVICE_RELEASE_NAME} 8080:80 & echo $! > pf.pid
+          kubectl port-forward svc/demo 8080:80 & echo $! > pf.pid
           sleep 3
           docker run --rm -t owasp/zap2docker-stable \
             zap-baseline.py -t http://localhost:8080 -x zap.xml
