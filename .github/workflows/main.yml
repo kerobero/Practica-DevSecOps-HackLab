@@ -116,7 +116,7 @@ jobs:
 
   docker:
     env:
-      USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       GITHUB_SHA: ${{ github.sha }}
     name: 'Docker'
     runs-on: ubuntu-latest
