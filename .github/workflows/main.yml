@@ -89,12 +89,10 @@ jobs:
         run: |
           cd "${APP_DIR}"
           docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-          echo ${IMAGE_NAME}
-          echo ${IMAGE_TAG}
       - name: SBOM (Syft)
         uses: anchore/sbom-action@v0
         with:
-          image: demo-app:local
+          image: localhost/demo-app:local
           artifact-name: sbom.spdx.json   # queda como artefacto del job
   # ──────────────────────────────────────────────────────────────────────────────
   # Trivy + Firma/Verify (cosign)
