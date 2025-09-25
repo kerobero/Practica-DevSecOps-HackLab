@@ -164,3 +164,37 @@ jobs:
       #   run: cosign sign --yes --key cosign.key "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}" <<< "$COSIGN_PASSWORD"
       # - name: Verify imagen (gate)
       #   run: cosign verify --key cosign.pub "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}"
+
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Slide 15 — Deploy a K8s local + DAST (ZAP)
+  # ──────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy a Kubernetes local (kind/minikube)
+    runs-on: self-hosted
+    needs: [sign]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargar imagen local al clúster kind
+        run: kind load docker-image ${IMAGE_NAME}:${IMAGE_TAG} --name ${KIND_CLUSTER}
+      - name: Helm upgrade/install
+        run: |
+          helm upgrade --install ${SERVICE_RELEASE_NAME} charts/demo-app \
+            --set image.repository=${IMAGE_NAME} \
+            --set image.tag=${IMAGE_TAG} \
+            --set service.type=NodePort
+      - name: Esperar readiness
+        run: kubectl rollout status deploy/${SERVICE_RELEASE_NAME} --timeout=180s
+
+  dast:
+    name: DAST (OWASP ZAP baseline)
+    runs-on: self-hosted
+    needs: [deploy]
+    steps:
+      - name: Port-forward al Service y ejecutar ZAP
+        run: |
+          kubectl port-forward svc/${SERVICE_RELEASE_NAME} 8080:80 & echo $! > pf.pid
+          sleep 3
+          docker run --rm -t owasp/zap2docker-stable \
+            zap-baseline.py -t http://localhost:8080 -x zap.xml
+          kill $(cat pf.pid) || true
