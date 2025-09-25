@@ -108,6 +108,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: apps/10-secrets-leak/Dockerfile
           push: true
           tags: kerobero/secrets-leak:local
 
