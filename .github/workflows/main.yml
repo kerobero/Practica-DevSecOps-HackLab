@@ -23,7 +23,7 @@ env:
   # Parámetros de despliegue local
   IMAGE_NAME: demo-app
   IMAGE_TAG: local
-  KIND_CLUSTER: kind
+  KIND_CLUSTER: devsecops
   SERVICE_RELEASE_NAME: demo
 
 jobs:
@@ -167,7 +167,7 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────────────────────
-  # Slide 15 — Deploy a K8s local + DAST (ZAP)
+  # Deploy a K8s local + DAST (ZAP)
   # ──────────────────────────────────────────────────────────────────────────────
   deploy:
     name: Deploy a Kubernetes local (kind/minikube)
@@ -176,7 +176,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Cargar imagen local al clúster kind
-        run: kind load docker-image ${IMAGE_NAME}:${IMAGE_TAG} --name ${KIND_CLUSTER}
+        run: kind load docker-image demo-app:local --name devsecops
       - name: Helm upgrade/install
         run: |
           helm upgrade --install ${SERVICE_RELEASE_NAME} charts/demo-app \
