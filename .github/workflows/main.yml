@@ -105,7 +105,7 @@ jobs:
       - name: Trivy image (CRITICAL,HIGH)
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          scan-type: image
+          scan-type: fs
           image-ref: demo-app:local
           format: sarif
           output: trivy-image.sarif
