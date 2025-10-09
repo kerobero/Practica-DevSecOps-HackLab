@@ -126,19 +126,19 @@ jobs:
   container_scan:
     name: Container & deps scan (Trivy)
     runs-on: self-hosted
-    needs: [build]
+    needs: [push_image]
     steps:
-      # - name: Trivy image (CRITICAL,HIGH)
-      #   uses: aquasecurity/trivy-action@0.28.0
-      #   with:
-      #     scan-type: fs
-      #     image-ref: demo-app:local
-      #     format: sarif
-      #     output: trivy-image.sarif
-      #     ignore-unfixed: true
-      #     severity: CRITICAL,HIGH
-      # - uses: github/codeql-action/upload-sarif@v3
-      #   with: { sarif_file: trivy-image.sarif }
+      - name: Trivy image (CRITICAL,HIGH)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          format: sarif
+          output: trivy-image.sarif
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: trivy-image.sarif }
 
       - name: Trivy fs (SCA sobre el repo)
         uses: aquasecurity/trivy-action@0.28.0
