@@ -125,7 +125,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────────
   container_scan:
     name: Container & deps scan (Trivy)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [push_image]
     steps:
       - name: Trivy image (CRITICAL,HIGH)
