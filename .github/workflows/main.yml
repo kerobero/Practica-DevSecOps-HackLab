@@ -23,7 +23,7 @@ env:
   # Parámetros de despliegue local
   IMAGE_NAME: demo-app
   IMAGE_TAG: local
-  KIND_CLUSTER: kind
+  KIND_CLUSTER: devsecops
   SERVICE_RELEASE_NAME: demo
 
 jobs:
@@ -94,25 +94,57 @@ jobs:
         with:
           image: demo-app:local
           artifact-name: sbom.spdx.json   # queda como artefacto del job
-  # ──────────────────────────────────────────────────────────────────────────────
+
+  publish:
+    name: Publish to GitHub Container Registry
+    runs-on: ubuntu-latest
+    needs: [sast]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ env.APP_DIR }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Trivy + Firma/Verify (cosign)
   # ──────────────────────────────────────────────────────────────────────────────
   container_scan:
     name: Container & deps scan (Trivy)
-    runs-on: self-hosted
-    needs: [build]
+    runs-on: ubuntu-latest
+    needs: [publish]
     steps:
-      # - name: Trivy image (CRITICAL,HIGH)
-      #   uses: aquasecurity/trivy-action@0.28.0
-      #   with:
-      #     scan-type: fs
-      #     image-ref: demo-app:local
-      #     format: sarif
-      #     output: trivy-image.sarif
-      #     ignore-unfixed: true
-      #     severity: CRITICAL,HIGH
-      # - uses: github/codeql-action/upload-sarif@v3
-      #   with: { sarif_file: trivy-image.sarif }
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trivy image (CRITICAL,HIGH)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest'
+          format: sarif
+          output: trivy-image.sarif
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: trivy-image.sarif }
 
       - name: Trivy fs (SCA sobre el repo)
         uses: aquasecurity/trivy-action@0.28.0
@@ -126,31 +158,31 @@ jobs:
       - uses: github/codeql-action/upload-sarif@v3
         with: { sarif_file: trivy-fs.sarif }
 
-  # sign:
-  #   name: Supply chain gate (cosign sobre SBOM)
-  #   runs-on: self-hosted
-  #   needs: [container_scan]
-  #   env:
-  #     COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Instalar cosign
-  #       run: |
-  #         COSIGN_URL="https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"
-  #         curl -sSLf "$COSIGN_URL" -o /usr/local/bin/cosign
-  #         chmod +x /usr/local/bin/cosign
-  #     - name: Generar claves (si no existen)
-  #       run: |
-  #         test -f cosign.key || cosign generate-key-pair
-  #     - name: Descargar SBOM del job anterior
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: sbom.spdx.json
-  #         path: .
-  #     - name: Firmar SBOM (sign-blob)
-  #       run: cosign sign-blob --yes --key cosign.key sbom.spdx.json <<< "$COSIGN_PASSWORD"
-  #     - name: Verificar firma del SBOM (gate)
-  #       run: cosign verify-blob --key cosign.pub --signature sbom.spdx.json.sig sbom.spdx.json
+  sign:
+    name: Supply chain gate (cosign sobre SBOM)
+    runs-on: self-hosted
+    needs: [container_scan]
+    env:
+      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cosign
+        run: |
+          COSIGN_URL="https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64"
+          curl -sSLf "$COSIGN_URL" -o /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
+      - name: Generar claves (si no existen)
+        run: |
+          test -f cosign.key || cosign generate-key-pair
+      - name: Descargar SBOM del job anterior
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom.spdx.json
+          path: .
+      - name: Firmar SBOM (sign-blob)
+        run: cosign sign-blob --yes --key cosign.key sbom.spdx.json <<< "$COSIGN_PASSWORD"
+      - name: Verificar firma del SBOM (gate)
+        run: cosign verify-blob --key cosign.pub --signature sbom.spdx.json.sig sbom.spdx.json
 
       # ── Alternativa (comentada) si publicas la imagen en GHCR y quieres firmar la imagen:
       # - name: Login GHCR
@@ -164,3 +196,37 @@ jobs:
       #   run: cosign sign --yes --key cosign.key "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}" <<< "$COSIGN_PASSWORD"
       # - name: Verify imagen (gate)
       #   run: cosign verify --key cosign.pub "ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}"
+
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Deploy a K8s local + DAST (ZAP)
+  # ──────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy a Kubernetes local (kind/minikube)
+    runs-on: self-hosted
+    needs: [container_scan]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargar imagen local al clúster kind
+        run: kind load docker-image demo-app:local --name devsecops
+      - name: Helm upgrade/install
+        run: |
+          helm upgrade --install demo-app charts/demo-app \
+            --set image.repository=${IMAGE_NAME} \
+            --set image.tag=${IMAGE_TAG} \
+            --set service.type=NodePort
+      - name: Esperar readiness
+        run: kubectl rollout status deploy/demo-app --timeout=180s
+
+  dast:
+    name: DAST (OWASP ZAP baseline)
+    runs-on: self-hosted
+    needs: [deploy]
+    steps:
+      - name: Port-forward al Service y ejecutar ZAP
+        run: |
+          kubectl port-forward svc/demo 8080:80 & echo $! > pf.pid
+          sleep 3
+          docker run --rm -t owasp/zap2docker-stable \
+            zap-baseline.py -t http://localhost:8080 -x zap.xml
+          kill $(cat pf.pid) || true
